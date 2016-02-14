@@ -1,49 +1,50 @@
-# Utilizzo la libreria logging per tracciare su un file di log
-try:
+try: # file di log
     import logging
     logging.basicConfig(filename='test_3xpert.log',level=logging.INFO)
     logging.info('module logging imported')
 except ImportError:
     print 'che sfortuna, non possiamo tracciare nulla...'
 
-# Utilizzo il modulo sys per cambiare la codifica di default
-try:
+try: # per cambiare la codifica di default
     import sys
     logging.info('module sys imported')
 except ImportError:
     logging.error('error: no module named sys imported')
 
-# Utilizzo la libreria RE, che implementa le espressioni regolari in Python
-try:
+try: # espressioni regolari
     import re
     logging.info('module re imported')
 except ImportError:
     logging.error('error: no module named re imported')
 
-# Import smtplib for the actual email sending function
-try:
+
+try: # html parsing to retrieve question
+    from bs4 import BeautifulSoup
+    logging.info('module re imported')
+except ImportError:
+    logging.error('error: no module named BeautifulSoup imported')
+
+try: # actual email sending function
     import smtplib
     logging.info('module smtplib imported')
 except ImportError:
     logging.error('error: no module named smtplib imported')
 
-# Utilizzo la libreria Requests: HTTP for Humans 
-try:
+try: # Requests: HTTP for Humans 
     import requests
     logging.info('module requests imported')
 except ImportError:
     logging.error('error: no module named requests imported')
 
-# Import sleep e randint per recuperare la pagina 3xpert con ritardi casuali all'interno di un intervallo
-try:
+
+try: # per recuperare la pagina 3xpert con ritardi casuali all'interno di un intervallo
     from time import sleep
     from random import randint
     logging.info('functions sleep and randint imported')
 except ImportError:
     logging.error('error: no functions named time or random imported')
 
-# Import datetime for timestamping
-try:
+try: # for timestamping
     import datetime
     logging.info('module datetime imported')
 except ImportError:
@@ -93,31 +94,57 @@ class XpertUser:
 class XpertPortal:
     xpertLoggedIn = False
     counter_domanda_ko = 0
-    def __init__(self, sign_in_url, home_url):
+    remember_expert_token = ''
+    authenticity_token = ''
+    _session_id = ''
+    def __init__(self, sign_in_url, home_url, current_url):
         self.sign_in_url = sign_in_url
         self.home_url = home_url
+        self.current_url = current_url
+        self.data = ''
+        self.domanda = ''
         self.s = requests.session()
+        self.remember_expert_token = self.s.cookies.get_dict().get('remember_expert_token')
+        self._session_id = self.s.cookies.get_dict().get('_session_id')
         reload(sys);
         sys.setdefaultencoding("utf8")
     def xpertScraping(self, matchme, url):
         webPage = self.s.get(url, verify = False, headers = {'User-agent': 'Mozilla/5.0'})        
+        soup = BeautifulSoup(webPage.text)
+        #print webPage.text
+        table = soup.find("table")
+        #print table
+        if (table is not None):
+            #print table
+            table_body = table.find('tbody')
+            rows = table_body.find_all('tr')
+            for row in rows:
+                cols = row.find_all('td')
+                self.data = cols[0].contents[0]
+                self.domanda = cols[2].contents[0]
         return re.search(matchme, str(webPage.text))
+    def xpertCurrent(self, payload):
+        print 'xpertCurrent enter'
+        try:
+             r = self.s.put('https://social.tre.it/expert/tickets/current', payload, verify = False)
+        except:
+            self.xpertLoggedIn = True
     def xpertLogin(self, payload):
         try:
             self.s.post(self.sign_in_url, payload, verify = False)
             self.xpertLoggedIn = True
+            self.remember_expert_token = self.s.cookies.get_dict().get('remember_expert_token')
             logging.info('3xpert logged in')
         except:
-            xpertLoggedIn = False
+            self.xpertLoggedIn = False
             logging.info('3xpert not logged in')
     def xpertDomanda(self, domanda, emailTo, emailServer):
         domanda_ok = 'la tua domanda!'
         domanda_ko = 'non ci sono domande per te'
-        # logging.info('Domanda')
         header = 'To: ' + emailTo + '\n' + 'From: ' + emailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
         if (domanda):
             if (domanda.group(1) == domanda_ok):
-                msg = header + '\n 3xpert, ' + domanda_ok + '\n\n'
+                msg = header + '\n 3xpert, ' + domanda_ok + '\n' + self.data + '\n' + self.domanda + '\n\n'
                 logging.info(emailServer)
                 logging.info(emailTo)
                 emailServer.xpertSendEmail(emailTo, msg)
@@ -149,48 +176,49 @@ def setupXpert(xpertEmailTo, xpertEmailServer, xpertUser, xpertPortal):
         xpertEmailServer.xpertSendEmail(xpertEmailTo, msg)
     except:
         logging.error('email framework error')
-
     try:
         csrf = xpertPortal.xpertScraping('meta content="(.*)" name="csrf-token" /', xpertPortal.sign_in_url)
         logging.info(csrf.group(1))
-        data = {'expert[email]': xpertUser.login, 'expert[password]': xpertUser.pwd, 'expert[remember_me]': '1', 'expert[terms_of_service]': '1', 'authenticity_token' : csrf.group(1)}
+        xpertPortal.authenticity_token = csrf.group(1)
+        data = {'expert[email]': xpertUser.login, 'expert[password]': xpertUser.pwd, 'expert[remember_me]': '1', 'expert[terms_of_service]': '1', 'authenticity_token' : xpertPortal.authenticity_token}
         xpertPortal.xpertLogin(data)
         logging.info('3xpert portal logged in')
+        #dataCurrent = {'authenticity_token' : xpertPortal.authenticity_token, 'start' : 'true', 'id' : 841, 'status' : 'expert_online'}
+        #xpertPortal.xpertCurrent(dataCurrent)
     except:
         logging.error('3xpert portal error')
         header = 'To: ' + xpertEmailTo + '\n' + 'From: ' + xpertEmailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
         msg = header + '\n 3xpert portal error \n\n'
         xpertEmailServer.xpertSendEmail(xpertEmailTo, msg)
-
     return {'emailLoggedIn':xpertEmailServer.emailLoggedIn, 'xpertPortalLoggedIn':xpertPortal.xpertLoggedIn}
 
 if __name__ == "__main__":
     xpertEmailTo = XpertEmailTo('wladimiro.carapucci@gmail.com')
     xpertEmailServer = XpertEmailServer('smtp.gmail.com', 465, 'carapucci.bimby@gmail.com', 'bimbymio')
     xpertUser = XpertUser('wladimiro.carapucci@gmail.com', '3Xpert_3')
-    xpertPortal = XpertPortal('https://social.tre.it/expert/sign_in', 'https://social.tre.it/expert')
+    xpertPortal = XpertPortal('https://social.tre.it/expert/sign_in', 'https://social.tre.it/expert','https://social.tre.it/expert/tickets/current')
     login = setupXpert(xpertEmailTo.to, xpertEmailServer, xpertUser, xpertPortal)
     if ((login['emailLoggedIn'] == True) and (login['xpertPortalLoggedIn'] == True)):
         while True:
-            if (datetime.datetime.now().hour == 23):
+            if (datetime.datetime.now().hour == 0):
                 logging.info('3xpert, good night')
                 sleep(8*60*60)
-            elif (datetime.datetime.now().hour == 0):
-                logging.info('3xpert, good night')
-                sleep(7*60*60)
             elif (datetime.datetime.now().hour == 1):
                 logging.info('3xpert, good night')
-                sleep(6*60*60)
+                sleep(7*60*60)
             elif (datetime.datetime.now().hour == 2):
                 logging.info('3xpert, good night')
-                sleep(5*60*60)
+                sleep(6*60*60)
             elif (datetime.datetime.now().hour == 3):
                 logging.info('3xpert, good night')
-                sleep(4*60*60)
+                sleep(5*60*60)
             elif (datetime.datetime.now().hour == 4):
                 logging.info('3xpert, good night')
-                sleep(3*60*60)
+                sleep(4*60*60)
             elif (datetime.datetime.now().hour == 5):
+                logging.info('3xpert, good night')
+                sleep(3*60*60)
+            elif (datetime.datetime.now().hour == 6):
                 logging.info('3xpert, good night')
                 sleep(2*60*60)
             elif (datetime.datetime.now().hour == 7):
@@ -208,7 +236,7 @@ if __name__ == "__main__":
                     logging.info('email server created again')
                 xpertPortal.xpertDomanda(domanda_per_te, xpertEmailTo.to, xpertEmailServer)
                 # Random delay
-                sleep(randint(300,330))
+                sleep(randint(30,33))
     else:
         logging.error('connections to be closed')
         header = 'To: ' + xpertEmailTo.to + '\n' + 'From: ' + xpertEmailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
