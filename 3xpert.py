@@ -172,25 +172,25 @@ if __name__ == "__main__":
     login = setupXpert(xpertEmailTo.to, xpertEmailServer, xpertUser, xpertPortal)
     if ((login['emailLoggedIn'] == True) and (login['xpertPortalLoggedIn'] == True)):
         while True:
-            if (datetime.datetime.now().hour == 0):
+            if (datetime.datetime.now().hour == 23):
                 logging.info('3xpert, good night')
                 sleep(8*60*60)
-            elif (datetime.datetime.now().hour == 1):
+            elif (datetime.datetime.now().hour == 0):
                 logging.info('3xpert, good night')
                 sleep(7*60*60)
-            elif (datetime.datetime.now().hour == 2):
+            elif (datetime.datetime.now().hour == 1):
                 logging.info('3xpert, good night')
                 sleep(6*60*60)
-            elif (datetime.datetime.now().hour == 3):
+            elif (datetime.datetime.now().hour == 2):
                 logging.info('3xpert, good night')
                 sleep(5*60*60)
-            elif (datetime.datetime.now().hour == 4):
+            elif (datetime.datetime.now().hour == 3):
                 logging.info('3xpert, good night')
                 sleep(4*60*60)
-            elif (datetime.datetime.now().hour == 5):
+            elif (datetime.datetime.now().hour == 4):
                 logging.info('3xpert, good night')
                 sleep(3*60*60)
-            elif (datetime.datetime.now().hour == 6):
+            elif (datetime.datetime.now().hour == 5):
                 logging.info('3xpert, good night')
                 sleep(2*60*60)
             elif (datetime.datetime.now().hour == 7):
