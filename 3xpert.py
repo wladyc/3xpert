@@ -51,7 +51,8 @@ except ImportError:
     logging.error('error: no module named datetime imported')
 
 class XpertEmailTo:
-    to = ''
+    #to = ''
+    to = []
     def __init__(self, to):
         self.to = to
 
@@ -73,7 +74,7 @@ class XpertEmailServer:
     def xpertSendEmail(self, receiver, msg):
         try:
             logging.info(self.sender_usr)
-            logging.info(receiver)
+            logging.info(', '.join(receiver))
             self.smtpserver.sendmail(self.sender_usr, receiver, msg)
             logging.info('mail sent')
         except:
@@ -141,12 +142,12 @@ class XpertPortal:
     def xpertDomanda(self, domanda, emailTo, emailServer):
         domanda_ok = 'la tua domanda!'
         domanda_ko = 'non ci sono domande per te'
-        header = 'To: ' + emailTo + '\n' + 'From: ' + emailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
+        header = 'To: ' + ', '.join(emailTo) + '\n' + 'From: ' + emailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
         if (domanda):
             if (domanda.group(1) == domanda_ok):
                 msg = header + '\n 3xpert, ' + domanda_ok + '\n' + self.data + '\n' + self.domanda + '\n\n'
                 logging.info(emailServer)
-                logging.info(emailTo)
+                logging.info(', '.join(emailTo))
                 emailServer.xpertSendEmail(emailTo, msg)
                 logging.info(domanda_ok)
             elif (domanda.group(1) == domanda_ko):
@@ -154,7 +155,7 @@ class XpertPortal:
                 if (self.counter_domanda_ko == 4):
                     msg = header + '\n 3xpert, ' + domanda_ko + '\n\n'
                     logging.info(emailServer)
-                    logging.info(emailTo)
+                    logging.info(', '.join(emailTo))
                     emailServer.xpertSendEmail(emailTo, msg)
                     logging.info(domanda_ko)
                     self.counter_domanda_ko = 0
@@ -171,7 +172,7 @@ class XpertPortal:
 
 def setupXpert(xpertEmailTo, xpertEmailServer, xpertUser, xpertPortal):
     try:
-        header = 'To: ' + xpertEmailTo + '\n' + 'From: ' + xpertEmailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
+        header = 'To: ' + ', '.join(xpertEmailTo) + '\n' + 'From: ' + xpertEmailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
         msg = header + '\n email framework ready to be used \n\n'
         xpertEmailServer.xpertSendEmail(xpertEmailTo, msg)
     except:
@@ -187,13 +188,13 @@ def setupXpert(xpertEmailTo, xpertEmailServer, xpertUser, xpertPortal):
         #xpertPortal.xpertCurrent(dataCurrent)
     except:
         logging.error('3xpert portal error')
-        header = 'To: ' + xpertEmailTo + '\n' + 'From: ' + xpertEmailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
+        header = 'To: ' + ', '.join(xpertEmailTo) + '\n' + 'From: ' + xpertEmailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
         msg = header + '\n 3xpert portal error \n\n'
         xpertEmailServer.xpertSendEmail(xpertEmailTo, msg)
     return {'emailLoggedIn':xpertEmailServer.emailLoggedIn, 'xpertPortalLoggedIn':xpertPortal.xpertLoggedIn}
 
 if __name__ == "__main__":
-    xpertEmailTo = XpertEmailTo('wladimiro.carapucci@gmail.com')
+    xpertEmailTo = XpertEmailTo(['wladimiro.carapucci@gmail.com', '3922105850@tre.it'])
     xpertEmailServer = XpertEmailServer('smtp.gmail.com', 465, 'carapucci.bimby@gmail.com', 'bimbymio')
     xpertUser = XpertUser('wladimiro.carapucci@gmail.com', '3Xpert_3')
     xpertPortal = XpertPortal('https://social.tre.it/expert/sign_in', 'https://social.tre.it/expert','https://social.tre.it/expert/tickets/current')
@@ -230,16 +231,16 @@ if __name__ == "__main__":
                 if (xpertEmailServer.emailLoggedIn == False):
                     logging.info('email user not logged in')
                     xpertEmailServer = XpertEmailServer('smtp.gmail.com', 465, 'carapucci.bimby@gmail.com', 'bimbymio')
-                    header = 'To: ' + xpertEmailTo.to + '\n' + 'From: ' + xpertEmailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
+                    header = 'To: ' + ', '.join(xpertEmailTo.to) + '\n' + 'From: ' + xpertEmailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
                     msg = header + '\n email server created again\n\n'
                     xpertEmailServer.xpertSendEmail(xpertEmailTo.to, msg)
                     logging.info('email server created again')
                 xpertPortal.xpertDomanda(domanda_per_te, xpertEmailTo.to, xpertEmailServer)
                 # Random delay
-                sleep(randint(30,33))
+                sleep(randint(300,330))
     else:
         logging.error('connections to be closed')
-        header = 'To: ' + xpertEmailTo.to + '\n' + 'From: ' + xpertEmailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
+        header = 'To: ' + ', '.join(xpertEmailTo.to) + '\n' + 'From: ' + xpertEmailServer.sender_usr + '\n' + 'Subject: 3xpert\n'
         msg = header + '\n 3xpert, setup error... exit\n\n'
         xpertEmailServer.xpertSendEmail(xpertEmailTo.to, msg)
         del xpertEmailServer
